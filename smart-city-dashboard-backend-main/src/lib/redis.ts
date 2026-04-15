@@ -16,14 +16,26 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import asyncRedis from 'async-redis';
+import asyncRedis from "async-redis";
 
 // checks if we are running in production mode
 const isProduction =
-  process.env.NODE_ENV !== undefined && process.env.NODE_ENV === 'production';
+  process.env.NODE_ENV !== undefined && process.env.NODE_ENV === "production";
 
 const client = asyncRedis.createClient({
-  host: isProduction ? 'redis' : '127.0.0.1',
+  host: isProduction ? "redis" : "127.0.0.1",
+  retry_strategy: (options) => {
+    if (options.error && options.error.code === "ECONNREFUSED") {
+      console.warn("Redis connection refused - running without cache");
+      return new Error("Redis unavailable");
+    }
+    return undefined;
+  },
+});
+
+// Suppress error events for testing without Redis
+client.on("error", (err) => {
+  console.warn("Redis error (non-critical):", err.message);
 });
 
 export { client };

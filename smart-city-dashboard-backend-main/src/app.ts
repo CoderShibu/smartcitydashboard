@@ -16,26 +16,27 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import express from 'express';
-import cors from 'cors';
+import express from "express";
+import cors from "cors";
 
-import openSenseMapRouter from './routes/opensensemap';
-import parkingRouter from './routes/parking';
-import pedestrianRouter from './routes/pedestrian';
-import aaseeRouter from './routes/aasee';
-import bicycleRouter from './routes/bicycle';
+import openSenseMapRouter from "./routes/opensensemap";
+import parkingRouter from "./routes/parking";
+import pedestrianRouter from "./routes/pedestrian";
+import aaseeRouter from "./routes/aasee";
+import bicycleRouter from "./routes/bicycle";
+import zonesRouter from "./routes/zones";
 
 const port: number = +process.env.PORT || 3000;
 
 const app = express();
 
-if (process.env.NODE_ENV !== 'production') {
+if (process.env.NODE_ENV !== "production") {
   app.use(cors());
 }
 
 // the index route which gives information about the available routes
-app.get('/', async (req, res) => {
-  res.header('Content-Type', 'text/plain; charset=utf-8');
+app.get("/", async (req, res) => {
+  res.header("Content-Type", "text/plain; charset=utf-8");
   res.send(`
   Available Routes:
 
@@ -48,11 +49,12 @@ app.get('/', async (req, res) => {
   `);
 });
 
-app.use('/opensensemap', openSenseMapRouter);
-app.use('/parking', parkingRouter);
-app.use('/pedestrian', pedestrianRouter);
-app.use('/aasee', aaseeRouter);
-app.use('/bicycle', bicycleRouter);
+app.use("/opensensemap", openSenseMapRouter);
+app.use("/parking", parkingRouter);
+app.use("/pedestrian", pedestrianRouter);
+app.use("/aasee", aaseeRouter);
+app.use("/bicycle", bicycleRouter);
+app.use("/api/zones", zonesRouter);
 
 app.listen(port, () => {
   return console.log(`server is listening on ${port}`);
