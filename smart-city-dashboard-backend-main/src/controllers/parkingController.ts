@@ -16,16 +16,16 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import axios, { AxiosRequestConfig } from 'axios';
-import BaseController from './baseController';
-import { client } from '../lib/redis';
-import HttpController from './httpController';
+import axios, { AxiosRequestConfig } from "axios";
+import BaseController from "./baseController";
+import { client } from "../lib/redis";
+import HttpController from "./httpController";
 import {
   getDateArray,
   isValidDate,
   updateQueryStringParameter,
-} from '../utils';
-import csv from 'csvtojson';
+} from "../utils";
+import csv from "csvtojson";
 
 interface ILocation {
   latitude: number;
@@ -66,28 +66,32 @@ export default class ParkingController extends HttpController {
   private totalParkingLots = {};
 
   private async fetchTotalParking() {
-    const parkingNowRequest = await axios.get(this.url);
-    const parkingTotal = await parkingNowRequest.data.features.map((f) => ({
-      [f.properties.NAME.replace('Parkhaus ', '')
-        .replace('Parkplatz ', '')
-        .replace('PH ', '')
-        .replace('Münster-Arkaden', 'Münster Arkaden')
-        .replace('Hörster Platz', 'Hörsterplatz')]: f.properties.parkingTotal,
-    }));
+    try {
+      const parkingNowRequest = await axios.get(this.url);
+      const parkingTotal = await parkingNowRequest.data.features.map((f) => ({
+        [f.properties.NAME.replace("Parkhaus ", "")
+          .replace("Parkplatz ", "")
+          .replace("PH ", "")
+          .replace("Münster-Arkaden", "Münster Arkaden")
+          .replace("Hörster Platz", "Hörsterplatz")]: f.properties.parkingTotal,
+      }));
 
-    this.totalParkingLots = Object.assign({}, ...parkingTotal);
-    console.log(this.totalParkingLots);
+      this.totalParkingLots = Object.assign({}, ...parkingTotal);
+      console.log(this.totalParkingLots);
+    } catch (error) {
+      console.log("Parking total fetch error:", error.message);
+    }
   }
 
   public async getTimeSeriesData(from: Date, to: Date): Promise<any> {
     if (!isValidDate(from) && !isValidDate(to)) {
       return new Promise<boolean>((resolve, reject) => {
-        reject('Invalid Date');
+        reject("Invalid Date");
       });
     }
 
-    let url = updateQueryStringParameter(this.url, 'from', from.toISOString());
-    url = updateQueryStringParameter(url, 'to', to.toISOString());
+    let url = updateQueryStringParameter(this.url, "from", from.toISOString());
+    url = updateQueryStringParameter(url, "to", to.toISOString());
     try {
       const dates = getDateArray(from, to);
       const data = await Promise.all(
@@ -95,7 +99,7 @@ export default class ParkingController extends HttpController {
           try {
             const request = await axios.get(
               `https://raw.githubusercontent.com/codeformuenster/parking-decks-muenster/master/data/${
-                date.toISOString().split('T')[0]
+                date.toISOString().split("T")[0]
               }.csv`,
               this.options.reqConfig
             );
@@ -106,7 +110,7 @@ export default class ParkingController extends HttpController {
             return Object.keys(csvData).map((key) => {
               const data = Object.keys(csvData[key]).map((e) => {
                 const total = this.totalParkingLots[
-                  e.replace('PH ', '').replace('PP ', '')
+                  e.replace("PH ", "").replace("PP ", "")
                 ];
                 return {
                   [e]: total - csvData[key][e],
@@ -115,7 +119,7 @@ export default class ParkingController extends HttpController {
 
               return {
                 ...Object.assign({}, ...data),
-                timestamp: csvData[key]['Datum und Uhrzeit'],
+                timestamp: csvData[key]["Datum und Uhrzeit"],
               };
             });
           } catch (e) {}

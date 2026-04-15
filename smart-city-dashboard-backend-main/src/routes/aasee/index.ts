@@ -16,37 +16,37 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-import cron from 'node-cron';
-import AaseeController from '../../controllers/aaseeController';
+import cron from "node-cron";
+import AaseeController from "../../controllers/aaseeController";
 
-import { client } from '../../lib/redis';
-import { isValidDate } from '../../utils';
+import { client } from "../../lib/redis";
+import { isValidDate } from "../../utils";
 
-const AASEE_UPDATE_INTERVAL: string = '* * * * *'; // each minute
+const AASEE_UPDATE_INTERVAL: string = "* * * * *"; // each minute
 
 // controller
 const aasee = new AaseeController(
   `https://datahub.digital/api/device/832/parsed-packets?auth=${process.env.DATAHUB_DIGITAL_TOKEN}`,
-  'aasee',
+  "aasee",
   {
     postBody: {
       variables: [
         {
-          variable: 'water_temperature',
-          value_type_name: '°C',
+          variable: "water_temperature",
+          value_type_name: "°C",
         },
         {
-          variable: 'dissolved_oxygen',
-          value_type_name: 'Number',
+          variable: "dissolved_oxygen",
+          value_type_name: "Number",
         },
         {
-          variable: 'pH',
-          value_type_name: 'Number',
+          variable: "pH",
+          value_type_name: "Number",
         },
       ],
-      from: '1d',
+      from: "1d",
     },
     location: {
       latitude: 51.957148,
@@ -56,35 +56,39 @@ const aasee = new AaseeController(
 );
 
 // after connection to redis db is established start to update data repeatedly
-client.on('connect', () => {
+client.on("connect", () => {
   cron.schedule(AASEE_UPDATE_INTERVAL, async () => {
-    await aasee.update();
+    await aasee
+      .update()
+      .catch((err) => console.log("Aasee update error:", err.message));
   });
-  aasee.update();
+  aasee
+    .update()
+    .catch((err) => console.log("Aasee update error:", err.message));
 });
 
 // routes
-router.get('/', async (req, res) => {
-  const data = await client.get('aasee');
-  res.setHeader('Content-Type', 'application/json');
+router.get("/", async (req, res) => {
+  const data = await client.get("aasee");
+  res.setHeader("Content-Type", "application/json");
   res.send(data);
 });
 
-router.get('/timeseries', async (req, res) => {
+router.get("/timeseries", async (req, res) => {
   const from = new Date(req.query.from);
 
   // wrong date
   if (!isValidDate(from)) {
     res
       .json({
-        message: 'Invalid Date.',
+        message: "Invalid Date.",
       })
       .status(422);
     return;
   }
 
   const data = await aasee.getTimeSeriesData(from);
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   res.send(data);
 });
 

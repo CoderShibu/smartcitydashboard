@@ -16,20 +16,20 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-import cron from 'node-cron';
-import HystreetController from '../../controllers/hystreetController';
+import cron from "node-cron";
+import HystreetController from "../../controllers/hystreetController";
 
-import { client } from '../../lib/redis';
-import { isValidDate } from '../../utils';
+import { client } from "../../lib/redis";
+import { isValidDate } from "../../utils";
 
-const HYSTREET_UPDATE_INTERVAL: string = '*/10 * * * *'; // all 10 minutes
+const HYSTREET_UPDATE_INTERVAL: string = "*/10 * * * *"; // all 10 minutes
 
 // controller
 const pedenstrianCountRothenburg = new HystreetController(
-  'https://api.hystreet.com/locations/100',
-  'pedenstrianCountRothenburg',
+  "https://api.hystreet.com/locations/100",
+  "pedenstrianCountRothenburg",
   {
     location: {
       latitude: 51.96092,
@@ -37,15 +37,15 @@ const pedenstrianCountRothenburg = new HystreetController(
     },
     reqConfig: {
       headers: {
-        'Content-Type': 'application/vnd.hystreet.v1',
-        'X-API-Token': process.env.HYSTREETS_API_TOKEN,
+        "Content-Type": "application/vnd.hystreet.v1",
+        "X-API-Token": process.env.HYSTREETS_API_TOKEN,
       },
     },
   }
 );
 const pedenstrianCountLudgeristraße = new HystreetController(
-  'https://api.hystreet.com/locations/117',
-  'pedenstrianCountLudgeristraße',
+  "https://api.hystreet.com/locations/117",
+  "pedenstrianCountLudgeristraße",
   {
     location: {
       latitude: 51.960353,
@@ -53,15 +53,15 @@ const pedenstrianCountLudgeristraße = new HystreetController(
     },
     reqConfig: {
       headers: {
-        'Content-Type': 'application/vnd.hystreet.v1',
-        'X-API-Token': process.env.HYSTREETS_API_TOKEN,
+        "Content-Type": "application/vnd.hystreet.v1",
+        "X-API-Token": process.env.HYSTREETS_API_TOKEN,
       },
     },
   }
 );
 const pedenstrianCountAlterFischmarkt = new HystreetController(
-  'https://api.hystreet.com/locations/296',
-  'pedenstrianCountAlterFischmarkt',
+  "https://api.hystreet.com/locations/296",
+  "pedenstrianCountAlterFischmarkt",
   {
     location: {
       latitude: 51.963543,
@@ -69,15 +69,15 @@ const pedenstrianCountAlterFischmarkt = new HystreetController(
     },
     reqConfig: {
       headers: {
-        'Content-Type': 'application/vnd.hystreet.v1',
-        'X-API-Token': process.env.HYSTREETS_API_TOKEN,
+        "Content-Type": "application/vnd.hystreet.v1",
+        "X-API-Token": process.env.HYSTREETS_API_TOKEN,
       },
     },
   }
 );
 const pedenstrianCountSalzstraße = new HystreetController(
-  'https://api.hystreet.com/locations/310',
-  'pedenstrianCountSalzstraße',
+  "https://api.hystreet.com/locations/310",
+  "pedenstrianCountSalzstraße",
   {
     location: {
       latitude: 51.962038,
@@ -85,8 +85,8 @@ const pedenstrianCountSalzstraße = new HystreetController(
     },
     reqConfig: {
       headers: {
-        'Content-Type': 'application/vnd.hystreet.v1',
-        'X-API-Token': process.env.HYSTREETS_API_TOKEN,
+        "Content-Type": "application/vnd.hystreet.v1",
+        "X-API-Token": process.env.HYSTREETS_API_TOKEN,
       },
     },
   }
@@ -100,36 +100,44 @@ const controllers = [
 ];
 
 // after connection to redis db is established start to update data repeatedly
-client.on('connect', () => {
+client.on("connect", () => {
   cron.schedule(HYSTREET_UPDATE_INTERVAL, () => {
-    controllers.forEach((c) => c.update());
+    controllers.forEach((c) => {
+      c.update().catch((err) =>
+        console.log("Hystreet update error:", err.message)
+      );
+    });
   });
 
-  controllers.forEach((c) => c.update());
+  controllers.forEach((c) => {
+    c.update().catch((err) =>
+      console.log("Hystreet update error:", err.message)
+    );
+  });
 });
 
 // routes
-router.get('/', async (req, res) => {
-  const rothenburg: any = await client.get('pedenstrianCountRothenburg');
-  const ludgeristraße: any = await client.get('pedenstrianCountLudgeristraße');
+router.get("/", async (req, res) => {
+  const rothenburg: any = await client.get("pedenstrianCountRothenburg");
+  const ludgeristraße: any = await client.get("pedenstrianCountLudgeristraße");
   const alterFischmarkt: any = await client.get(
-    'pedenstrianCountAlterFischmarkt'
+    "pedenstrianCountAlterFischmarkt"
   );
-  const salzstraße: any = await client.get('pedenstrianCountSalzstraße');
+  const salzstraße: any = await client.get("pedenstrianCountSalzstraße");
   const data = [
     JSON.parse(rothenburg),
     JSON.parse(ludgeristraße),
     JSON.parse(alterFischmarkt),
     JSON.parse(salzstraße),
   ];
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   res.send(data);
 });
 
 /**
  * @description returns timeseries data of all predestrian counters
  */
-router.get('/timeseries', async (req, res) => {
+router.get("/timeseries", async (req, res) => {
   const from = new Date(req.query.from);
   const to = new Date(req.query.to);
 
@@ -137,7 +145,7 @@ router.get('/timeseries', async (req, res) => {
   if (!isValidDate(from) || !isValidDate(to)) {
     res
       .json({
-        message: 'Invalid Date.',
+        message: "Invalid Date.",
       })
       .status(422);
     return;
@@ -149,7 +157,7 @@ router.get('/timeseries', async (req, res) => {
     )
   );
 
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   res.send(data);
 });
 

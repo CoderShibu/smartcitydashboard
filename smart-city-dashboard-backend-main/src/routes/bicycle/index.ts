@@ -16,24 +16,24 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-import cron from 'node-cron';
-import EcoCounterController from '../../controllers/ecoCounterController';
+import cron from "node-cron";
+import EcoCounterController from "../../controllers/ecoCounterController";
 
-import { client } from '../../lib/redis';
-import { isValidDate } from '../../utils';
+import { client } from "../../lib/redis";
+import { isValidDate } from "../../utils";
 
-const ECO_COUNTER_UPDATE_INTERVAL: string = '0 * * * *'; // everyday at 00:00
+const ECO_COUNTER_UPDATE_INTERVAL: string = "0 * * * *"; // everyday at 00:00
 
 // controller
 const bicycle = new EcoCounterController(
-  'https://apieco.eco-counter-tools.com/api/1.0/site',
-  'bicycle',
+  "https://apieco.eco-counter-tools.com/api/1.0/site",
+  "bicycle",
   {
     reqConfig: {
       headers: {
-        Accept: 'application/json',
+        Accept: "application/json",
         Authorization: `Bearer ${process.env.ECO_COUNTER_API_TOKEN}`,
       },
     },
@@ -41,42 +41,46 @@ const bicycle = new EcoCounterController(
 );
 
 // after connection to redis db is established start to update data repeatedly
-client.on('connect', () => {
+client.on("connect", () => {
   cron.schedule(ECO_COUNTER_UPDATE_INTERVAL, async () => {
-    await bicycle.update();
+    await bicycle
+      .update()
+      .catch((err) => console.log("Bicycle update error:", err.message));
   });
 
-  bicycle.update();
+  bicycle
+    .update()
+    .catch((err) => console.log("Bicycle update error:", err.message));
 });
 
 // routes
-router.get('/', async (req, res) => {
-  const data = await client.get('bicycle');
-  res.setHeader('Content-Type', 'application/json');
+router.get("/", async (req, res) => {
+  const data = await client.get("bicycle");
+  res.setHeader("Content-Type", "application/json");
   res.send(data);
 });
 
-router.get('/timeseries', async (req, res) => {
+router.get("/timeseries", async (req, res) => {
   const from = new Date(req.query.from);
 
   // wrong date
   if (!isValidDate(from)) {
     res
       .json({
-        message: 'Invalid Date.',
+        message: "Invalid Date.",
       })
       .status(422);
     return;
   }
 
   const data = await bicycle.getTimeSeriesData(from);
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   res.send(data);
 });
 
-router.get('/:counterId', async (req, res) => {
+router.get("/:counterId", async (req, res) => {
   const data = await client.get(`bicycle_${req.params.counterId}`);
-  res.setHeader('Content-Type', 'application/json');
+  res.setHeader("Content-Type", "application/json");
   res.send(data);
 });
 
